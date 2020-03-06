@@ -1,0 +1,6 @@
+*.sys
+*.vdi
+*.img
+*.name
+/z_tools/*
+/z_tools_old/*

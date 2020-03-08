@@ -19,10 +19,17 @@ nasmfunc.o:nasmfunc.asm
 	nasm -f elf32 -o nasmfunc.o nasmfunc.asm
 
 bootpack.o : bootpack.c
-	gcc -c -m32 -fno-pic -o bootpack.o bootpack.c
+	gcc -c -m32 -fno-pic -fno-stack-protector -o bootpack.o bootpack.c
 
-bootpack.hrb : nasmfunc.o bootpack.o Makefile
-	ld -m elf_i386 -e HariMain -o bootpack.hrb -T hrb.ld bootpack.o nasmfunc.o
+font.o : font.c
+	gcc -c -m32 -o font.o font.c
+
+mysprintf.o :mysprintf.c
+	gcc -c -m32 -fno-stack-protector -o mysprintf.o mysprintf.c
+
+bootpack.hrb : nasmfunc.o bootpack.o font.o mysprintf.o Makefile
+	ld -m elf_i386 -e HariMain -o bootpack.hrb -T hrb.ld bootpack.o font.o nasmfunc.o mysprintf.o
+	# gcc -m32 -fno-stack-protector -march=i486 -nostdlib -nostdinc -T hrb.ld bootpack.c font.o nasmfunc.o mysprintf.o -o bootpack.hrb
 
 haribote.sys: asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
@@ -58,10 +65,10 @@ vdi : haribote.img
 	VBoxManage convertfromraw --format VDI ./haribote.img ./haribote.vdi
 
 clean :
-	-$(DEL) ipl10.bin
-	-$(DEL) ipl10.lst
-	-$(DEL) haribote.sys
-	-$(DEL) haribote.lst
+	rm -f *.bin
+	rm -f *.o
+	rm -f *.sys
+	rm -f *.img
 
 src_only :
 	$(MAKE) clean

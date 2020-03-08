@@ -15,6 +15,8 @@ global io_out16
 global io_out32
 global io_load_eflags
 global io_store_eflags
+global load_gdtr
+global load_idtr
 
 section .text
 
@@ -76,3 +78,14 @@ io_store_eflags:
 	PUSH EAX
 	POPFD
 	RET
+load_gdtr:		; void load_gdtr(int limit, int addr)
+		mov		ax, [esp + 4]		; limit
+		mov 	[esp + 6], ax
+		lgdt	[esp + 6]
+		ret
+
+load_idtr:		; void load_idtr(int limit, int addr)
+		mov		ax, [esp + 4]		; limit
+		mov 	[esp + 6], ax
+		lidt	[esp + 6]
+		ret

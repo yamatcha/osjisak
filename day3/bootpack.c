@@ -1,4 +1,4 @@
-//bootpack.c
+// #include <stdio.h>
 void io_hlt(void);
 void io_cli(void);
 void io_out8(int port, int data);
@@ -7,7 +7,10 @@ void io_store_eflags(int eflags);
 void init_palette(void);
 void set_palette(int start, int end, unsigned char *rgb);
 void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
-// void write_mem8(int addr, int data);
+void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
+void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
+extern void sprintf(char *str, char *fmt, ...);
+void init_mouse_cursor8(char *mouse, char bc);
 
 #define COL8_000000 0
 #define COL8_FF0000 1
@@ -26,24 +29,54 @@ void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, i
 #define COL8_008484 14
 #define COL8_848484 15
 
+struct BOOTINFO
+{
+    char cyls, leds, vmode, reserve;
+    short scrnx, scrny;
+    char *vram;
+};
+struct SEGMENT_DESCRIPTOR
+{
+    short limit_low, base_low;
+    char base_mid, access_right;
+    char limit_high, base_high;
+};
+struct GATE_DESCRIPTOR
+{
+    short offset_low, selector;
+    char dw_count, access_right;
+    short offset_high;
+};
+
+void putblock8_8(char *vem, int vxsize, int pxsize, int pysize, int px0, int py0, char *buf, int bxsize);
+void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
+void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
+void init_gdtidt(void);
+void load_gdtr(int limit, int addr);
+void load_idtr(int limit, int addr);
+
 void HariMain(void)
 {
-    int i;
+    int mx, my;
     // char *p;
     char *vram;
-    int xsize, ysize;
+    char *s[40];
+    char *mcursor[256];
 
+    struct BOOTINFO *binfo = (struct BOOTINFO *)0x0ff0;
+    init_gdtidt();
     init_palette();
 
-    // p = (char *)0xa0000;
+    init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
+    init_mouse_cursor8(mcursor, COL8_008484);
 
-    vram = (char *)0xa0000;
-    xsize = 320;
-    ysize = 200;
+    mx = (binfo->scrnx - 16) / 2;
+    my = (binfo->scrny - 28 - 16) / 2;
+    sprintf(s, "(%d,%d)", mx, my);
+    putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
 
-    init_screen(vram, xsize, ysize);
+    putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
 
-    for (;;)
     {
         io_hlt();
     }
@@ -121,5 +154,141 @@ void init_screen(char *vram, int x, int y)
     boxfill8(vram, x, COL8_848484, x - 47, y - 23, x - 47, y - 4);
     boxfill8(vram, x, COL8_FFFFFF, x - 47, y - 3, x - 4, y - 3);
     boxfill8(vram, x, COL8_FFFFFF, x - 3, y - 24, x - 3, y - 3);
+    return;
+}
+void putfont8(char *vram, int xsize, int x, int y, char c, char *font)
+{
+    int i, j;
+    char d, *p;
+    char bit[8] = {0x80,
+                   0x40,
+                   0x20,
+                   0x10,
+                   0x08,
+                   0x04,
+                   0x02,
+                   0x01};
+    for (i = 0; i < 16; i++)
+    {
+        d = font[i];
+        p = vram + (y + i) * xsize + x;
+        for (j = 0; j < 8; j++)
+        {
+            if ((d & bit[j]) != 0)
+            {
+                p[j] = c;
+            }
+        }
+    }
+    return;
+}
+void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s)
+{
+    extern char hankaku[4096];
+    for (; *s != 0x00; s++)
+    {
+        putfont8(vram, xsize, x, y, c, hankaku + *s * 16);
+        x += 8;
+    }
+    return;
+}
+
+void init_mouse_cursor8(char *mouse, char bc)
+{
+    static char cursor[16][16] = {
+        "**************..",
+        "*OOOOOOOOOOO*...",
+        "*OOOOOOOOOO*....",
+        "*OOOOOOOOO*.....",
+        "*OOOOOOOO*......",
+        "*OOOOOOO*.......",
+        "*OOOOOOO*.......",
+        "*OOOOOOOO*......",
+        "*OOOO**OOO*.....",
+        "*OOO*..*OOO*....",
+        "*OO*....*OOO*...",
+        "*O*......*OOO*..",
+        "**........*OOO*.",
+        "*..........*OOO*",
+        "............*OO*",
+        ".............***"};
+    int x, y;
+
+    for (y = 0; y < 16; y++)
+    {
+        for (x = 0; x < 16; x++)
+        {
+            if (cursor[y][x] == '*')
+            {
+                mouse[y * 16 + x] = COL8_000000;
+            }
+            if (cursor[y][x] == 'O')
+            {
+                mouse[y * 16 + x] = COL8_FFFFFF;
+            }
+            if (cursor[y][x] == '.')
+            {
+                mouse[y * 16 + x] = bc;
+            }
+        }
+    }
+    return;
+}
+void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py0, char *buf, int bxsize)
+{
+    int x, y;
+    for (y = 0; y < pysize; y++)
+    {
+        for (x = 0; x < pxsize; x++)
+        {
+            vram[(py0 + y) * vxsize + (px0 + x)] = buf[y * bxsize + x];
+        }
+    }
+    return;
+}
+
+void init_gdtidt(void)
+{
+    struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)0x00270000;
+    struct GATE_DESCRIPTOR *idt = (struct GATE_DESCRIPTOR *)0x0026f800;
+    int i;
+    for (i = 0; i < 8192; i++)
+    {
+        set_segmdesc(gdt + i, 0, 0, 0);
+    }
+    set_segmdesc(gdt + 1, 0xffffffff, 0x00000000, 0x4092);
+    set_segmdesc(gdt + 2, 0x0007ffff, 0x00280000, 0x409a);
+    load_gdtr(0xffff, 0x00270000);
+
+    for (i = 0; i < 256; i++)
+    {
+        set_gatedesc(idt + i, 0, 0, 0);
+    }
+    load_idtr(0x7ff, 0x0026f800);
+    return;
+}
+void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar)
+{
+    if (limit > 0xfffff)
+    {
+        ar |= 0x8000;
+        limit /= 0x1000;
+    }
+    sd->limit_low = limit & 0xffff;
+    sd->base_low = base & 0xffff;
+    sd->base_mid = (base >> 16) & 0xff;
+    sd->access_right = ar & 0xff;
+    sd->limit_high = ((limit >> 16) & 0x0f) | ((ar >> 8) & 0xf0);
+    sd->base_high = (base >> 24) & 0xff;
+    return;
+}
+
+void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar)
+{
+    gd->offset_low = offset & 0xffff;
+    gd->selector = selector;
+    gd->dw_count = (ar >> 8) & 0xff;
+    gd->access_right = ar & 0xff;
+    gd->offset_high = (offset >> 16) & 0xffff;
     return;
 }

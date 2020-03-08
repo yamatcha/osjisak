@@ -8,6 +8,6 @@
 
 FROM ubuntu:16.04
 RUN apt update
-RUN apt install -y nasm make gcc libc6-i386 qemu bochs-sdl mtools
+RUN apt install -y nasm make gcc libc6-i386 qemu bochs-sdl mtools libc-dev-i386
 CMD [ "/bin/bash" ]
 WORKDIR /test/day3

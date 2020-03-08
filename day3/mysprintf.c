@@ -1,5 +1,5 @@
 #include <stdarg.h>
-
+#include "bootpack.h"
 //10進数からASCIIコードに変換
 int dec2asc(char *str, int dec)
 {

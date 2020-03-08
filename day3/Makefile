@@ -3,11 +3,12 @@ MAKE = make -r
 COPY     = cp
 DEL      = rm -f
 # GCC		= x86_64-elf-gcc
-
+GCC = gcc
+CFLAGS = -c -m32 -nostdlib -fno-stack-protector
 # EDIMG = $(TOOLPATH)edimg
 
 default:
-	$(MAKE) img
+	$(MAKE) run
 
 ipl10.bin : ipl10.asm Makefile
 	nasm ipl10.asm -o ipl10.bin -l ipl10.lst
@@ -15,20 +16,13 @@ ipl10.bin : ipl10.asm Makefile
 asmhead.bin: asmhead.asm Makefile
 	nasm asmhead.asm -o asmhead.bin -l asmhead.lst
 
-nasmfunc.o:nasmfunc.asm
+nasmfunc.o : nasmfunc.asm
 	nasm -f elf32 -o nasmfunc.o nasmfunc.asm
 
-bootpack.o : bootpack.c
-	gcc -c -m32 -fno-pic -fno-stack-protector -o bootpack.o bootpack.c
-
-font.o : font.c
-	gcc -c -m32 -o font.o font.c
-
-mysprintf.o :mysprintf.c
-	gcc -c -m32 -fno-stack-protector -o mysprintf.o mysprintf.c
-
-bootpack.hrb : nasmfunc.o bootpack.o font.o mysprintf.o Makefile
-	ld -m elf_i386 -e HariMain -o bootpack.hrb -T hrb.ld bootpack.o font.o nasmfunc.o mysprintf.o
+OBJS_BOOTPACK =bootpack.o nasmfunc.o dsctbl.o graphic.o font.o mysprintf.o int.o
+bootpack.hrb : $(OBJS_BOOTPACK) hrb.ld Makefile
+	# ld -m elf_i386 -e HariMain -o bootpack.hrb -T hrb.ld $(OBJS_BOOTPACK)
+	ld -m elf_i386 -T hrb.ld $(OBJS_BOOTPACK) -o $@
 	# gcc -m32 -fno-stack-protector -march=i486 -nostdlib -nostdinc -T hrb.ld bootpack.c font.o nasmfunc.o mysprintf.o -o bootpack.hrb
 
 haribote.sys: asmhead.bin bootpack.hrb Makefile
@@ -47,6 +41,9 @@ haribote.img : ipl10.bin haribote.sys Makefile
 	# 	imgout:haribote.img
 	# sh ./mkimg.sh ipl10.bin haribote.img
 
+%.o : %.c
+	$(GCC) $(CFLAGS) $*.c -o $*.o
+
 img : 
 	$(MAKE) haribote.img
 
@@ -56,7 +53,11 @@ nasm:
 sys :
 	$(MAKE) haribote.sys
 
+build:
+	docker build -t nasmubu .
+
 run: haribote.img
+	docker run -it --rm -v /Users/soju/workspace/osjisak/:/test nasmubu
 	qemu-system-i386 -fda haribote.img
 
 # when you use virtualbox

@@ -2,21 +2,13 @@
 ; TAB=4
 
 bits 32
-global io_hlt
-global write_mem8
-global io_cli
-global io_sti
-global io_stihlt
-global io_in8
-global io_in16
-global io_in32
-global io_out8
-global io_out16
-global io_out32
-global io_load_eflags
-global io_store_eflags
-global load_gdtr
-global load_idtr
+GLOBAL	io_hlt, io_cli, io_sti, io_stihlt
+GLOBAL	io_in8,  io_in16,  io_in32
+GLOBAL	io_out8, io_out16, io_out32
+GLOBAL	io_load_eflags, io_store_eflags
+GLOBAL	load_gdtr, load_idtr
+GLOBAL	asm_inthandler21, asm_inthandler27, asm_inthandler2c
+EXTERN	inthandler21, inthandler27, inthandler2c
 
 section .text
 
@@ -89,3 +81,50 @@ load_idtr:		; void load_idtr(int limit, int addr)
 		mov 	[esp + 6], ax
 		lidt	[esp + 6]
 		ret
+asm_inthandler21:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	inthandler21
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD
+
+asm_inthandler27:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	inthandler27
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD
+
+asm_inthandler2c:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	inthandler2c
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD

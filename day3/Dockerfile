@@ -12,4 +12,5 @@ RUN apt install -y nasm make gcc libc6-i386 qemu bochs-sdl mtools
 # libc-dev-i386
 # CMD [ "/bin/bash" ]
 WORKDIR /test/day3
-CMD [ "make","img" ]
+# CMD ["echo","SHELL"]
+CMD make img

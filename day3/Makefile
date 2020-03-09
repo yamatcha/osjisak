@@ -19,7 +19,7 @@ asmhead.bin: asmhead.asm Makefile
 nasmfunc.o : nasmfunc.asm
 	nasm -f elf32 -o nasmfunc.o nasmfunc.asm
 
-OBJS_BOOTPACK =bootpack.o nasmfunc.o dsctbl.o graphic.o font.o mysprintf.o int.o
+OBJS_BOOTPACK =bootpack.o nasmfunc.o dsctbl.o graphic.o font.o mysprintf.o int.o fifo.o
 bootpack.hrb : $(OBJS_BOOTPACK) hrb.ld Makefile
 	# ld -m elf_i386 -e HariMain -o bootpack.hrb -T hrb.ld $(OBJS_BOOTPACK)
 	ld -m elf_i386 -T hrb.ld $(OBJS_BOOTPACK) -o $@
@@ -55,9 +55,11 @@ sys :
 
 build:
 	docker build -t nasmubu .
-
-run: haribote.img
+dimg:
 	docker run -it --rm -v /Users/soju/workspace/osjisak/:/test nasmubu
+
+run: 
+	$(MAKE) dimg
 	qemu-system-i386 -fda haribote.img
 
 # when you use virtualbox

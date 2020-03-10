@@ -40,7 +40,7 @@ int fifo8_get(struct FIFO8 *fifo)
     fifo->q++;
     if (fifo->q == fifo->size)
     {
-        fifo->q == 0;
+        fifo->q = 0;
     }
     fifo->free++;
     return data;

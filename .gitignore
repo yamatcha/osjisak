@@ -2,6 +2,7 @@
 *.vdi
 *.img
 *.name
+*.o
 /z_tools/*
 /z_tools_old/*
 /.vscode/

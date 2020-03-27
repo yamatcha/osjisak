@@ -9,8 +9,9 @@ void HariMain(void)
     int mx, my, i;
     // char *p;
     char *vram;
-    struct FIFO8 timerfifo;
-    char s[40], keybuf[32], mousebuf[128], timerbuf[8], timerbuf2[8], timerbuf3[8];
+    struct FIFO32 fifo;
+    char s[40];
+    int fifobuf[128];
     struct TIMER *timer, *timer2, *timer3;
     struct MOUSE_DEC mdec;
     unsigned int memtotal, count = 0;
@@ -22,27 +23,23 @@ void HariMain(void)
     init_gdtidt();
     init_pic();
     io_sti(); /* IDT/PICの初期化が終わったのでCPUの割り込み禁止を解除 */
-    fifo8_init(&keyfifo, 32, keybuf);
-    fifo8_init(&mousefifo, 128, mousebuf);
+    fifo32_init(&fifo, 128, fifobuf);
     init_pit();
+    init_keybord(&fifo, 256);
+    enable_mouse(&fifo, 512, &mdec);
     io_out8(PIC0_IMR, 0xf8);
     io_out8(PIC1_IMR, 0xef); /* マウスを許可(11101111) */
 
-    fifo8_init(&timerfifo, 8, timerbuf);
     timer = timer_alloc();
-    timer_init(timer, &timerfifo, 10);
+    timer_init(timer, &fifo, 10);
     timer_settime(timer, 1000);
-    fifo8_init(&timerfifo, 8, timerbuf2);
     timer2 = timer_alloc();
-    timer_init(timer2, &timerfifo, 3);
+    timer_init(timer2, &fifo, 3);
     timer_settime(timer2, 300);
-    fifo8_init(&timerfifo, 8, timerbuf3);
     timer3 = timer_alloc();
-    timer_init(timer3, &timerfifo, 1);
+    timer_init(timer3, &fifo, 1);
     timer_settime(timer3, 50);
 
-    init_keybord();
-    enable_mouse(&mdec);
     memtotal = memtest(0x00400000, 0xbfffffff);
     memman_init(memman);
     memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
@@ -78,27 +75,26 @@ void HariMain(void)
 
     for (;;)
     {
+        count++;
         sprintf(s, "%d", timerctl.count);
         putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
         io_cli();
-        if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(&timerfifo) == 0)
+        if (fifo32_status(&fifo) == 0)
         {
             io_sti();
         }
         else
         {
-            if (fifo8_status(&keyfifo) != 0)
+            i = fifo32_get(&fifo);
+            io_sti();
+            if (256 <= i && i <= 511)
             {
-                i = fifo8_get(&keyfifo);
-                io_sti();
-                sprintf(s, "%x", i);
+                sprintf(s, "%x", i - 256);
                 putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
             }
-            else if (fifo8_status(&mousefifo) != 0)
+            else if (512 <= i && i <= 767)
             {
-                i = fifo8_get(&mousefifo);
-                io_sti();
-                if (mouse_decode(&mdec, i) != 0)
+                if (mouse_decode(&mdec, i - 512) != 0)
                 {
                     // sprintf(s, "%x %x %x", mdec.buf[0], mdec.buf[1], mdec.buf[2]);
                     sprintf(s, "[lcr %d %d]", mdec.x, mdec.y);
@@ -137,39 +133,31 @@ void HariMain(void)
                     putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
                     sheet_slide(sht_mouse, mx, my);
                 }
-
-                // sprintf(s, "%x", i);
-                // boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 32, 16, 47, 31);
-                // putfonts8_asc(binfo->vram, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
             }
-            else if (fifo8_status(&timerfifo) != 0)
+            else if (i == 10)
             {
-                i = fifo8_get(&timerfifo);
-                io_sti();
-                if (i == 10)
-                {
-                    putfonts8_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[sec]", 7);
-                }
-                else if (i == 3)
-                {
-                    putfonts8_asc_sht(sht_back, 0, 80, COL8_FFFFFF, COL8_008484, "3[sec]", 6);
-                }
-                else
-                {
-                    io_sti();
-                    if (i != 0)
-                    {
-                        timer_init(timer3, &timerfifo, 0);
-                        boxfill8(buf_back, binfo->scrnx, COL8_FFFFFF, 8, 96, 15, 111);
-                    }
-                    else
-                    {
-                        timer_init(timer3, &timerfifo, 1);
-                        boxfill8(buf_back, binfo->scrnx, COL8_008484, 8, 96, 15, 111);
-                    }
-                    timer_settime(timer3, 50);
-                    sheet_refresh(sht_back, 8, 96, 16, 112);
-                }
+                putfonts8_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[sec]", 7);
+                sprintf(s, "%d,count");
+                putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
+            }
+            else if (i == 3)
+            {
+                putfonts8_asc_sht(sht_back, 0, 80, COL8_FFFFFF, COL8_008484, "3[sec]", 6);
+                count = 0;
+            }
+            else if (i == 1)
+            {
+                timer_init(timer3, &fifo, 0);
+                boxfill8(buf_back, binfo->scrnx, COL8_FFFFFF, 8, 96, 15, 111);
+                timer_settime(timer3, 50);
+                sheet_refresh(sht_back, 8, 96, 16, 112);
+            }
+            else if (i == 0)
+            {
+                timer_init(timer3, &fifo, 1);
+                boxfill8(buf_back, binfo->scrnx, COL8_008484, 8, 96, 15, 111);
+                timer_settime(timer3, 50);
+                sheet_refresh(sht_back, 8, 96, 16, 112);
             }
         }
     }

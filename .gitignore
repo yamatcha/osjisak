@@ -3,6 +3,8 @@
 *.img
 *.name
 *.o
+*.hrb
+*.bin
 /z_tools/*
 /z_tools_old/*
 /.vscode/

@@ -106,22 +106,22 @@ void inthandler2c(int *esp);
 void inthandler27(int *esp);
 
 // fifo.c
-struct FIFO8
+struct FIFO32
 {
-    unsigned char *buf;
+    int *buf;
     int p, q, size, free, flags;
 };
 
-void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf);
-int fifo8_put(struct FIFO8 *fifo, unsigned char data);
-int fifo8_get(struct FIFO8 *fifo);
-int fifo8_status(struct FIFO8 *fifo);
+void fifo32_init(struct FIFO32 *fifo, int size, int *buf);
+int fifo32_put(struct FIFO32 *fifo, int data);
+int fifo32_get(struct FIFO32 *fifo);
+int fifo32_status(struct FIFO32 *fifo);
 
 /* keyboard.c */
 void inthandler21(int *esp);
 void wait_KBC_sendready(void);
-void init_keyboard(void);
-extern struct FIFO8 keyfifo;
+void init_keybord(struct FIFO32 *fifo, int data0);
+extern struct FIFO32 *keyfifo;
 #define PORT_KEYDAT 0x0060
 #define PORT_KEYCMD 0x0064
 
@@ -132,9 +132,9 @@ struct MOUSE_DEC
     int x, y, btn;
 };
 void inthandler2c(int *esp);
-void enable_mouse(struct MOUSE_DEC *mdec);
+void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
 int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
-extern struct FIFO8 mousefifo;
+extern struct FIFO32 *mousefifo;
 
 // meomory.c
 
@@ -191,8 +191,8 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
 struct TIMER
 {
     unsigned int timeout, flags;
-    struct FIFO8 *fifo;
-    unsigned char data;
+    struct FIFO32 *fifo;
+    int data;
 };
 
 struct TIMERCTL
@@ -206,5 +206,5 @@ void init_pit(void);
 void inthandler20(int *esp);
 
 void timer_free(struct TIMER *timer);
-void timer_init(struct TIMER *timer, struct FIFO8 *fifo, unsigned char data);
+void timer_init(struct TIMER *timer, struct FIFO32 *fifo, unsigned char data);
 void timer_settime(struct TIMER *timer, unsigned int timeout);

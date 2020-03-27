@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "bootpack.h": "c"
+        "bootpack.h": "c",
+        "stdio.h": "c"
     }
 }

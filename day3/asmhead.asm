@@ -1,6 +1,14 @@
 ; testos0nas
 ; TAB=4
 
+VBEMODE	EQU		0x105			; 1024 x  768 x 8bitカラー
+; （画面モード一覧）
+;	0x100 :  640 x  400 x 8bitカラー
+;	0x101 :  640 x  480 x 8bitカラー
+;	0x103 :  800 x  600 x 8bitカラー
+;	0x105 : 1024 x  768 x 8bitカラー
+;	0x107 : 1280 x 1024 x 8bitカラー
+
 BOTPAK	EQU		0x00280000		; bootpackのロード先
 DSKCAC	EQU		0x00100000		; ディスクキャッシュの場所
 DSKCAC0	EQU		0x00008000		; ディスクキャッシュの場所（リアルモード）
@@ -10,21 +18,69 @@ DSKCAC0	EQU		0x00008000		; ディスクキャッシュの場所（リアルモ�
 CYLS EQU 0x0ff0
 LEDS EQU 0x0ff1
 VMODE EQU 0x0ff2
-SRCNX EQU 0x0ff4
+SCRNX EQU 0x0ff4
 SCRNY EQU 0x0ff6
 VRAM EQU 0x0ff8
 
     ORG 0xc200
-; setting screen mode
-    MOV AL,0x13
-    MOV AH,0x00
-    INT 0x10
-    MOV BYTE [VMODE], 8
-    MOV WORD [SRCNX],320
-    MOV WORD [SCRNY],200
-    MOV DWORD [VRAM],0x000a0000
+
+; VBE EXIST CHECK
+	MOV AX,0x9000
+	MOV ES,AX
+	MOV DI,0
+	MOV AX,0x4f00
+	INT 0x10
+	CMP AX,0x004f
+	JNE scrn320
+
+; VBE version CHECK
+	MOV AX,[ES:DI+4]
+	CMP AX,0x0200
+	JB scrn320
+
+; get information of display mode
+	MOV CX,VBEMODE
+	MOV AX,0x4f01
+	INT 0x10
+	CMP AX,0x004f
+	JNE scrn320
+
+; 画面モード情報の確認
+
+		CMP		BYTE [ES:DI+0x19],8
+		JNE		scrn320
+		CMP		BYTE [ES:DI+0x1b],4
+		JNE		scrn320
+		MOV		AX,[ES:DI+0x00]
+		AND		AX,0x0080
+		JZ		scrn320			; モード属性のbit7が0だったのであきらめる
+
+; 画面モードの切り替え
+
+		MOV		BX,VBEMODE+0x4000
+		MOV		AX,0x4f02
+		INT		0x10
+		MOV		BYTE [VMODE],8	; 画面モードをメモする（C言語が参照する）
+		MOV		AX,[ES:DI+0x12]
+		MOV		[SCRNX],AX
+		MOV		AX,[ES:DI+0x14]
+		MOV		[SCRNY],AX
+		MOV		EAX,[ES:DI+0x28]
+		MOV		[VRAM],EAX
+		JMP		keystatus
+
+scrn320:
+		MOV		AL,0x13			; VGAグラフィックス、320x200x8bitカラー
+		MOV		AH,0x00
+		INT		0x10
+		MOV		BYTE [VMODE],8	; 画面モードをメモする（C言語が参照する）
+		MOV		WORD [SCRNX],320
+		MOV		WORD [SCRNY],200
+		MOV		DWORD [VRAM],0x000a0000
 
 ;tell LED status of keyboard\
+
+keystatus:
     MOV AH,0x02
     INT 0x16
     MOV [LEDS],AL

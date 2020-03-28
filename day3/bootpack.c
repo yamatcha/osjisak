@@ -29,7 +29,7 @@ void HariMain(void)
     enable_mouse(&fifo, 512, &mdec);
     io_out8(PIC0_IMR, 0xf8);
     io_out8(PIC1_IMR, 0xef); /* マウスを許可(11101111) */
-
+    set490(&fifo, 1);
     timer = timer_alloc();
     timer_init(timer, &fifo, 10);
     timer_settime(timer, 1000);
@@ -76,12 +76,12 @@ void HariMain(void)
     for (;;)
     {
         count++;
-        sprintf(s, "%d", timerctl.count);
-        putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
+        // sprintf(s, "%d", timerctl.count);
+        // putfonts8_asc_sht(sht_win, 100, 28, COL8_000000, COL8_C6C6C6, s, 10);
         io_cli();
         if (fifo32_status(&fifo) == 0)
         {
-            io_sti();
+            io_stihlt();
         }
         else
         {
@@ -91,6 +91,10 @@ void HariMain(void)
             {
                 sprintf(s, "%x", i - 256);
                 putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
+                if (i == 0x1e + 256)
+                {
+                    putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, "a", 1);
+                }
             }
             else if (512 <= i && i <= 767)
             {
@@ -137,13 +141,10 @@ void HariMain(void)
             else if (i == 10)
             {
                 putfonts8_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[sec]", 7);
-                sprintf(s, "%d,count");
-                putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
             }
             else if (i == 3)
             {
                 putfonts8_asc_sht(sht_back, 0, 80, COL8_FFFFFF, COL8_008484, "3[sec]", 6);
-                count = 0;
             }
             else if (i == 1)
             {
@@ -224,5 +225,21 @@ void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, i
     boxfill8(sht->buf, sht->bxsize, b, x, y, x + l * 8 - 1, y + 15);
     putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
     sheet_refresh(sht, x, y, x + l * 8, y + 16);
+    return;
+}
+
+void set490(struct FIFO32 *fifo, int mode)
+{
+    int i;
+    struct TIMER *timer;
+    if (mode != 0)
+    {
+        for (i = 0; i < 490; i++)
+        {
+            timer = timer_alloc();
+            timer_init(timer, fifo, 1024 + i);
+            timer_settime(timer, 100 * 60 * 60 * 24 * 50 + i * 100);
+        }
+    }
     return;
 }

@@ -190,6 +190,7 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
 
 struct TIMER
 {
+    struct TIMER *next;
     unsigned int timeout, flags;
     struct FIFO32 *fifo;
     int data;
@@ -198,13 +199,14 @@ struct TIMER
 struct TIMERCTL
 {
     unsigned int count, next, using;
-    struct TIMER *timers[MAX_TIMER];
+    struct TIMER *t0;
     struct TIMER timers0[MAX_TIMER];
 };
 extern struct TIMERCTL timerctl;
 void init_pit(void);
 void inthandler20(int *esp);
 
+struct TIMER *timer_alloc(void);
 void timer_free(struct TIMER *timer);
-void timer_init(struct TIMER *timer, struct FIFO32 *fifo, unsigned char data);
+void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data);
 void timer_settime(struct TIMER *timer, unsigned int timeout);

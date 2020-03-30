@@ -87,7 +87,7 @@ void inthandler20(int *esp)
     timerctl.next = timer->timeout;
     if (ts != 0)
     {
-        taskswitch();
+        task_switch();
     }
     return;
 }

@@ -122,7 +122,7 @@ int fifo32_status(struct FIFO32 *fifo);
 /* keyboard.c */
 void inthandler21(int *esp);
 void wait_KBC_sendready(void);
-void init_keybord(struct FIFO32 *fifo, int data0);
+void init_keyboard(struct FIFO32 *fifo, int data0);
 extern struct FIFO32 *keyfifo;
 #define PORT_KEYDAT 0x0060
 #define PORT_KEYCMD 0x0064

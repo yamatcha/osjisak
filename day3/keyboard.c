@@ -29,7 +29,7 @@ void wait_KBC_sendready(void)
     return;
 }
 
-void init_keybord(struct FIFO32 *fifo, int data0)
+void init_keyboard(struct FIFO32 *fifo, int data0)
 {
     keyfifo = fifo;
     keydata0 = data0;

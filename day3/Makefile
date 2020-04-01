@@ -31,6 +31,7 @@ haribote.sys: asmhead.bin bootpack.hrb Makefile
 haribote.img : ipl10.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl10.bin -i haribote.img ::
 	mcopy -i haribote.img haribote.sys ::
+	mcopy -i haribote.img mystd.c ::
 	# echo haribote.sys > haribote.name
 	# dd if=ipl10.bin     of=haribote.img count=2880 bs=512 conv=notrunc
 	# dd if=haribote.name of=haribote.img count=1 bs=512 seek=19 conv=notrunc

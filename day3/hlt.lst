@@ -1,0 +1,5 @@
+     1                                  [BITS 32]
+     2 00000000 FA                          CLI
+     3                                  fin:
+     4 00000001 F4                          HLT
+     5 00000002 EBFD                        JMP fin

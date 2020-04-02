@@ -28,10 +28,14 @@ bootpack.hrb : $(OBJS_BOOTPACK) hrb.ld Makefile
 haribote.sys: asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
 
-haribote.img : ipl10.bin haribote.sys Makefile
+hlt.hrb: hlt.asm Makefile
+	nasm hlt.asm -o hlt.hrb -l hlt.lst
+
+haribote.img : ipl10.bin haribote.sys hlt.hrb Makefile
 	mformat -f 1440 -C -B ipl10.bin -i haribote.img ::
 	mcopy -i haribote.img haribote.sys ::
 	mcopy -i haribote.img mystd.c ::
+	mcopy -i haribote.img hlt.hrb ::
 	# echo haribote.sys > haribote.name
 	# dd if=ipl10.bin     of=haribote.img count=2880 bs=512 conv=notrunc
 	# dd if=haribote.name of=haribote.img count=1 bs=512 seek=19 conv=notrunc

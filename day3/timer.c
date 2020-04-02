@@ -122,3 +122,18 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
         }
     }
 }
+void set490(struct FIFO32 *fifo, int mode)
+{
+    int i;
+    struct TIMER *timer;
+    if (mode != 0)
+    {
+        for (i = 0; i < 490; i++)
+        {
+            timer = timer_alloc();
+            timer_init(timer, fifo, 1024 + i);
+            timer_settime(timer, 100 * 60 * 60 * 24 * 50 + i * 100);
+        }
+    }
+    return;
+}

@@ -6,6 +6,7 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void task_b_main(struct SHEET *sht_win_b);
+void console_task(struct SHEET *sheet, unsigned int memtotal);
 
 struct FILEINFO
 {
@@ -483,13 +484,13 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
     return;
 }
 
-void console_task(struct SHEET *sheet, int memtotal)
+void console_task(struct SHEET *sheet, unsigned int memtotal)
 {
     struct TIMER *timer;
     struct TASK *task = task_now();
 
     int i, fifobuf[128], cursor_x = 16, cursor_y = 28, cursor_c = -1;
-    char s[30], cmdline[30];
+    char s[30], cmdline[30], *p;
     int x, y;
     struct MEMMAN *memman = (struct MEMMAN *)MEMMAN_ADDR;
     struct FILEINFO *finfo = (struct FILEINFO *)(ADR_DISKIMG + 0x002600);
@@ -606,32 +607,110 @@ void console_task(struct SHEET *sheet, int memtotal)
                         }
                         cursor_y = cons_newline(cursor_y, sheet);
                     }
+                    else if (cmdline[0] == 'c' && cmdline[1] == 'a' && cmdline[2] == 't' && cmdline[3] == ' ')
+                    {
+                        for (y = 0; y < 11; y++)
+                        {
+                            s[y] = ' ';
+                        }
+                        y = 0;
+                        for (x = 4; y < 11 && cmdline[x] != 0; x++)
+                        {
+                            if (cmdline[x] == '.' && y <= 8)
+                            {
+                                y = 8;
+                            }
+                            else
+                            {
+                                s[y] = cmdline[x];
+                                if ('a' <= s[y] && s[y] <= 'z')
+                                {
+                                    /* 小文字は大文字に直す */
+                                    s[y] -= 0x20;
+                                }
+                                y++;
+                            }
+                        }
+                        /* ファイルを探す */
+                        for (x = 0; x < 224;)
+                        {
+                            if (finfo[x].name[0] == 0x00)
+                            {
+                                break;
+                            }
+                            if ((finfo[x].type & 0x18) == 0)
+                            {
+                                for (y = 0; y < 11; y++)
+                                {
+                                    if (finfo[x].name[y] != s[y])
+                                    {
+                                        goto type_next_file;
+                                    }
+                                }
+                                break; /* ファイルが見つかった */
+                            }
+                        type_next_file:
+                            x++;
+                        }
+                        if (x < 224 && finfo[x].name[0] != 0x00)
+                        {
+                            /* ファイルが見つかった場合 */
+                            y = finfo[x].size;
+                            p = (char *)(finfo[x].clustno * 512 + 0x003e00 + ADR_DISKIMG);
+                            cursor_x = 8;
+                            for (x = 0; x < y; x++)
+                            {
+                                /* 1文字ずつ出力 */
+                                s[0] = p[x];
+                                s[1] = 0;
+                                putfonts8_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, s, 1);
+                                cursor_x += 8;
+                                if (cursor_x == 8 + 240)
+                                {
+                                    cursor_x = 8;
+                                    cursor_y = cons_newline(cursor_y, sheet);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            /* ファイルが見つからなかった場合 */
+                            // putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "File not found.", 15);
+                            cursor_y = cons_newline(cursor_y, sheet);
+                        }
+                        cursor_y = cons_newline(cursor_y, sheet);
+                    }
                     else if (cmdline[0] != 0)
                     {
-                        putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "Bad command", 12);
+                        /* コマンドではなく、さらに空行でもない */
+                        putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "Bad command.", 12);
                         cursor_y = cons_newline(cursor_y, sheet);
                         cursor_y = cons_newline(cursor_y, sheet);
                     }
+                    /* プロンプト表示 */
                     putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, ">", 1);
                     cursor_x = 16;
                 }
                 else
                 {
+                    /* 一般文字 */
                     if (cursor_x < 240)
                     {
+                        /* 一文字表示してから、カーソルを1つ進める */
                         s[0] = i - 256;
-                        s[i] = 0;
+                        s[1] = 0;
                         cmdline[cursor_x / 8 - 2] = i - 256;
                         putfonts8_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, s, 1);
                         cursor_x += 8;
                     }
                 }
             }
+            /* カーソル再表示 */
             if (cursor_c >= 0)
             {
                 boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, cursor_y, cursor_x + 7, cursor_y + 15);
             }
-            sheet_refresh(sheet, cursor_x, cursor_y, cursor_x + 8, cursor_y + 15);
+            sheet_refresh(sheet, cursor_x, cursor_y, cursor_x + 8, cursor_y + 16);
         }
     }
 }

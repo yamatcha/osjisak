@@ -252,7 +252,6 @@ extern struct TIMER *task_timer;
 struct TASK *task_init(struct MEMMAN *memman);
 struct TASK *task_alloc(void);
 
-void console_task(struct SHEET *sheet, int memtotal);
 void task_run(struct TASK *task, int level, int priority);
 void task_switch(void);
 void task_sleep(struct TASK *task);

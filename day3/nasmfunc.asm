@@ -11,7 +11,10 @@ GLOBAL	asm_inthandler21, asm_inthandler27, asm_inthandler2c, asm_inthandler20
 GLOBAL load_cr0, store_cr0
 GLOBAL memtest_sub
 GLOBAL load_tr, taskswitch4, taskswitch3,farjmp
+GLOBAL asm_cons_putchar
+GLOBAL farcall
 EXTERN	inthandler21, inthandler27, inthandler2c, inthandler20
+EXTERN cons_putchar
 
 section .text
 
@@ -205,4 +208,18 @@ taskswitch3: ; void taskswitch3(void);
 	
 taskswitch4: ; void taskswitch4(void);
 	JMP 4*8:0
+	RET
+
+asm_cons_putchar:
+	STI
+	PUSH 1
+	AND EAX, 0xff
+	PUSH EAX
+	PUSH DWORD [0x0fec]
+	CALL cons_putchar
+	ADD ESP,12
+	IRETD
+
+farcall:
+	CALL FAR[ESP+4]
 	RET

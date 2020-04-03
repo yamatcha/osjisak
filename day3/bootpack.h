@@ -26,7 +26,9 @@ void asm_inthandler2c(void);
 void asm_inthandler20(void);
 int load_cr0(void);
 void store_cr0(int cr0);
-memtest_sub(unsigned int start, unsigned int end);
+unsigned int memtest_sub(unsigned int start, unsigned int end);
+void asm_cons_putchar(void);
+void farcall(int eip, int cs);
 
 // graphic.c
 void init_palette(void);
@@ -271,7 +273,7 @@ struct CONSOLE
 };
 void console_task(struct SHEET *sheet, unsigned int memtotal);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);
-int cons_newline(struct CONSOLE *cons);
+void cons_newline(struct CONSOLE *cons);
 void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal);
 void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
 void cmd_cls(struct CONSOLE *cons);

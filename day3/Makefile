@@ -25,17 +25,20 @@ bootpack.hrb : $(OBJS_BOOTPACK) hrb.ld Makefile
 	ld -m elf_i386 -T hrb.ld $(OBJS_BOOTPACK) -o $@
 	# gcc -m32 -fno-stack-protector -march=i486 -nostdlib -nostdinc -T hrb.ld bootpack.c font.o nasmfunc.o mysprintf.o -o bootpack.hrb
 
+bootpack.map: $(OBJS_BOOTPACK) hrb.ld Makefile
+	ld -Map bootpack.map -m elf_i386 -e HariMain -o bootpack.bin -T hrb.ld $(OBJS_BOOTPACK)
+
 haribote.sys: asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
 
-hlt.hrb: hlt.asm Makefile
-	nasm hlt.asm -o hlt.hrb -l hlt.lst
+hello.hrb: hello.asm Makefile
+	nasm hello.asm -o hello.hrb -l hello.lst
 
-haribote.img : ipl10.bin haribote.sys hlt.hrb Makefile
+haribote.img : ipl10.bin haribote.sys hello.hrb Makefile
 	mformat -f 1440 -C -B ipl10.bin -i haribote.img ::
 	mcopy -i haribote.img haribote.sys ::
 	mcopy -i haribote.img mystd.c ::
-	mcopy -i haribote.img hlt.hrb ::
+	mcopy -i haribote.img hello.hrb ::
 	# echo haribote.sys > haribote.name
 	# dd if=ipl10.bin     of=haribote.img count=2880 bs=512 conv=notrunc
 	# dd if=haribote.name of=haribote.img count=1 bs=512 seek=19 conv=notrunc
@@ -57,6 +60,9 @@ nasm:
 
 sys :
 	$(MAKE) haribote.sys
+
+map:
+	$(MAKE) bootpack.map
 
 build:
 	docker build -t nasmubu .

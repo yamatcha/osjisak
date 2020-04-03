@@ -11,10 +11,10 @@ GLOBAL	asm_inthandler21, asm_inthandler27, asm_inthandler2c, asm_inthandler20
 GLOBAL load_cr0, store_cr0
 GLOBAL memtest_sub
 GLOBAL load_tr, taskswitch4, taskswitch3,farjmp
-GLOBAL asm_cons_putchar
+GLOBAL asm_cons_putchar, asm_hrb_api
 GLOBAL farcall
 EXTERN	inthandler21, inthandler27, inthandler2c, inthandler20
-EXTERN cons_putchar
+EXTERN cons_putchar, hrb_api
 
 section .text
 
@@ -212,14 +212,25 @@ taskswitch4: ; void taskswitch4(void);
 
 asm_cons_putchar:
 	STI
+	PUSHAD
 	PUSH 1
 	AND EAX, 0xff
 	PUSH EAX
 	PUSH DWORD [0x0fec]
 	CALL cons_putchar
 	ADD ESP,12
+	POPAD
 	IRETD
 
 farcall:
 	CALL FAR[ESP+4]
 	RET
+
+asm_hrb_api:
+	STI
+	PUSHAD
+	PUSHAD
+	CALL hrb_api
+	ADD ESP,32
+	POPAD
+	IRETD

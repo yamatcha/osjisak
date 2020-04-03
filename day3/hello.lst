@@ -1,12 +1,15 @@
-     1                                  [BITS 32]
-     2 00000000 B068                    		MOV		AL,'h'
-     3 00000002 CD40                    		INT		0x40
-     4 00000004 B065                    		MOV		AL,'e'
-     5 00000006 CD40                    		INT		0x40
-     6 00000008 B06C                    		MOV		AL,'l'
-     7 0000000A CD40                    		INT		0x40
-     8 0000000C B06C                    		MOV		AL,'l'
-     9 0000000E CD40                    		INT		0x40
-    10 00000010 B06F                    		MOV		AL,'o'
-    11 00000012 CD40                    		INT		0x40
-    12 00000014 CB                      		RETF
+     1                                  
+     2                                  [BITS 32]
+     3 00000000 B9[19000000]            	MOV ECX, msg
+     4 00000005 BA01000000              	MOV EDX,1
+     5                                  putloop:
+     6 0000000A 2E8A01                  	MOV AL,[cs:ECX]
+     7 0000000D 3C00                    	CMP AL,0
+     8 0000000F 7407                    	JE fin
+     9 00000011 CD40                    	INT 0x40
+    10 00000013 83C101                  	ADD ECX, 1
+    11 00000016 EBF2                    	JMP putloop
+    12                                  fin:
+    13 00000018 CB                      	RETF
+    14                                  msg:
+    15 00000019 68656C6C6F00            	DB "hello",0

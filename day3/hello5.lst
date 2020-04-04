@@ -1,0 +1,17 @@
+     1                                  [BITS 32]
+     2                                  		GLOBAL	_HariMain
+     3                                  
+     4                                  [SECTION .text]
+     5                                  
+     6                                  _HariMain:
+     7 00000000 BA02000000              		MOV		EDX,2
+     8 00000005 BB[00000000]            		MOV		EBX,msg
+     9 0000000A CD40                    		INT		0x40
+    10 0000000C BA04000000              		MOV		EDX,4
+    11 00000011 CD40                    		INT		0x40
+    12                                  
+    13                                  [SECTION .data]
+    14                                  
+    15                                  msg:
+    16 00000000 68656C6C6F2C20776F-     		DB	"hello, world", 0x0a, 0
+    17 00000009 726C640A00         

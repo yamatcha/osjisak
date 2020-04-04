@@ -1,6 +1,6 @@
      1                                  
      2                                  [BITS 32]
-     3 00000000 B9[19000000]            	MOV ECX, msg
+     3 00000000 B9[1F000000]            	MOV ECX, msg
      4 00000005 BA01000000              	MOV EDX,1
      5                                  putloop:
      6 0000000A 2E8A01                  	MOV AL,[cs:ECX]
@@ -10,6 +10,7 @@
     10 00000013 83C101                  	ADD ECX, 1
     11 00000016 EBF2                    	JMP putloop
     12                                  fin:
-    13 00000018 CB                      	RETF
-    14                                  msg:
-    15 00000019 68656C6C6F00            	DB "hello",0
+    13 00000018 BA04000000              	MOV EDX,4
+    14 0000001D CD40                    	INT 0x40
+    15                                  msg:
+    16 0000001F 68656C6C6F00            	DB "hello",0

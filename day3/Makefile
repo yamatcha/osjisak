@@ -49,7 +49,10 @@ crack1.hrb: crack1.o a_nasm.asm api.ls Makefile
 	nasm -f elf32 -o a_nasm.o a_nasm.asm
 	ld -m elf_i386 -o crack1.hrb -T api.ls a_nasm.o crack1.o
 
-haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb crack1.hrb Makefile
+crack2.hrb: crack2.asm Makefile
+	nasm crack2.asm -o crack2.hrb -l crack2.lst
+
+haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb crack1.hrb crack2.hrb Makefile
 	mformat -f 1440 -C -B ipl10.bin -i haribote.img ::
 	mcopy -i haribote.img haribote.sys ::
 	mcopy -i haribote.img mystd.c ::
@@ -58,6 +61,7 @@ haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb crac
 	mcopy -i haribote.img a.hrb ::
 	mcopy -i haribote.img hello3.hrb ::
 	mcopy -i haribote.img crack1.hrb ::
+	mcopy -i haribote.img crack2.hrb ::
 	# echo haribote.sys > haribote.name
 	# dd if=ipl10.bin     of=haribote.img count=2880 bs=512 conv=notrunc
 	# dd if=haribote.name of=haribote.img count=1 bs=512 seek=19 conv=notrunc

@@ -1,6 +1,6 @@
 [BITS 32]
     MOV EDX,2
-    MOV EVX,msg
+    MOV EBX,msg
     INT 0x40
     RETF
 msg:

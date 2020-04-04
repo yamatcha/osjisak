@@ -30,6 +30,10 @@ unsigned int memtest_sub(unsigned int start, unsigned int end);
 void asm_cons_putchar(void);
 void farcall(int eip, int cs);
 void asm_hrb_api(void);
+void start_app(int eip, int cs, int esp, int ds);
+
+// a_nasm.asm
+void api_putchar(int c);
 
 // graphic.c
 void init_palette(void);

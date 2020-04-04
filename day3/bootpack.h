@@ -24,6 +24,7 @@ void asm_inthandler21(void);
 void asm_inthandler27(void);
 void asm_inthandler2c(void);
 void asm_inthandler20(void);
+void asm_inthandler0c(void);
 void asm_inthandler0d(void);
 int load_cr0(void);
 void store_cr0(int cr0);
@@ -32,6 +33,7 @@ void asm_cons_putchar(void);
 void farcall(int eip, int cs);
 void asm_hrb_api(void);
 void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
+void asm_end_app(void);
 
 // a_nasm.asm
 void api_putchar(int c);

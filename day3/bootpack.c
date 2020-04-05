@@ -40,7 +40,7 @@ void HariMain(void)
     struct CONSOLE *cons;
 
     unsigned char *buf_back, buf_mouse[256], *buf_cons[2];
-    struct SHEET *sht_back, *sht_mouse, *sht_cons[2];
+    struct SHEET *sht_back, *sht_mouse;
     struct TASK *task_a, *task_cons[2], *task;
     struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
 
@@ -76,8 +76,7 @@ void HariMain(void)
     init_screen8(buf_back, binfo->scrnx, binfo->scrny);
 
     //sht_cons
-    sht_cons[0] = open_console(shtctl, memtotal);
-    sht_cons[1] = 0;
+    key_win = open_console(shtctl, memtotal);
 
     //sht_mouse
     sht_mouse = sheet_alloc(shtctl);
@@ -87,12 +86,11 @@ void HariMain(void)
     my = (binfo->scrny - 28 - 16) / 2;
 
     sheet_slide(sht_back, 0, 0);
-    sheet_slide(sht_cons[0], 32, 4);
+    sheet_slide(key_win, 32, 4);
     sheet_slide(sht_mouse, mx, my);
     sheet_updown(sht_back, 0);
-    sheet_updown(sht_cons[0], 1);
+    sheet_updown(key_win, 1);
     sheet_updown(sht_mouse, 2);
-    key_win = sht_cons[0];
     keywin_on(key_win);
     // sprintf(s, "(%d,%d)", mx, my);
     // putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
@@ -228,13 +226,12 @@ void HariMain(void)
                         io_sti();
                     }
                 }
-                if (i == 256 + 0x3c && key_shift != 0 && sht_cons[1] == 0)
+                if (i == 256 + 0x3c && key_shift != 0)
                 {
-                    sht_cons[1] = open_console(shtctl, memtotal);
-                    sheet_slide(sht_cons[1], 32, 4);
-                    sheet_updown(sht_cons[1], shtctl->top);
                     keywin_off(key_win);
-                    key_win = sht_cons[1];
+                    key_win = open_console(shtctl, memtotal);
+                    sheet_slide(key_win, 32, 4);
+                    sheet_updown(key_win, shtctl->top);
                     keywin_on(key_win);
                 }
                 if (i == 256 + 0x57)

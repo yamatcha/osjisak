@@ -5,7 +5,7 @@
 void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-    int mx, my, i, task_b_esp;
+    int mx, my, i, new_mx = -1, new_my = 0, new_wx = 0x7fffff, new_wy = 0;
     int j, x, y, mmx = -1, mmy = -1, mmx2 = 0;
     struct SHEET *sht = 0, *key_win;
     // char *p;
@@ -137,8 +137,23 @@ void HariMain(void)
         io_cli();
         if (fifo32_status(&fifo) == 0)
         {
-            task_sleep(task_a);
-            io_sti();
+            if (new_mx >= 0)
+            {
+                io_sti();
+                sheet_slide(sht_mouse, new_mx, new_my);
+                new_mx = -1;
+            }
+            else if (new_wx != 0x7fffffff)
+            {
+                io_sti();
+                sheet_slide(sht, new_wx, new_wy);
+                new_wx = 0x7fffffff;
+            }
+            else
+            {
+                task_sleep(task_a);
+                io_sti();
+            }
         }
         else
         {
@@ -288,6 +303,8 @@ void HariMain(void)
                     }
                     // sprintf(s, "(%d %d)", mx, my);
                     // putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
+                    new_mx = mx;
+                    new_my = my;
                     sheet_slide(sht_mouse, mx, my);
                     if ((mdec.btn & 0x01) != 0)
                     {
@@ -314,6 +331,7 @@ void HariMain(void)
                                             mmx = mx;
                                             mmy = my;
                                             mmx2 = sht->vx0;
+                                            new_wy = sht->vy0;
                                         }
                                         if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
                                         {
@@ -336,13 +354,19 @@ void HariMain(void)
                         {
                             x = mx - mmx;
                             y = my - mmy;
-                            sheet_slide(sht, (mmx2 + x + 2) & ~3, sht->vy0 + y);
+                            new_wx = (mmx2 + x + 2) & ~3;
+                            new_wy = new_wy + y;
                             mmy = my;
                         }
                     }
                     else
                     {
                         mmx = -1;
+                        if (new_wx != 0x7fffffff)
+                        {
+                            sheet_slide(sht, new_wx, new_wy);
+                            new_wx = 0x7fffffff;
+                        }
                     }
                 }
             }

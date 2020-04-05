@@ -70,8 +70,14 @@ walk.hrb: walk.o Makefile
 noodle.hrb: noodle.o mystd.o Makefile
 	nasm -f elf32 -o a_nasm.o a_nasm.asm
 	ld -m elf_i386 -o noodle.hrb -T api.ls a_nasm.o noodle.o mystd.o
+color.hrb: color.o mystd.o Makefile
+	nasm -f elf32 -o a_nasm.o a_nasm.asm
+	ld -m elf_i386 -o color.hrb -T api.ls a_nasm.o color.o mystd.o
+color2.hrb: color2.o mystd.o Makefile
+	nasm -f elf32 -o a_nasm.o a_nasm.asm
+	ld -m elf_i386 -o color2.hrb -T api.ls a_nasm.o color2.o mystd.o
 
-haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb hello4.hrb hello5.hrb winhelo.hrb winhelo2.hrb winhelo3.hrb star1.hrb lines.hrb walk.hrb noodle.hrb Makefile
+haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb hello4.hrb hello5.hrb winhelo.hrb winhelo2.hrb winhelo3.hrb star1.hrb lines.hrb walk.hrb noodle.hrb color.hrb color2.hrb Makefile
 	mformat -f 1440 -C -B ipl10.bin -i haribote.img ::
 	mcopy -i haribote.img haribote.sys ::
 	mcopy -i haribote.img mystd.c ::
@@ -88,6 +94,8 @@ haribote.img : ipl10.bin haribote.sys hello.hrb hello2.hrb a.hrb hello3.hrb hell
 	mcopy -i haribote.img lines.hrb ::
 	mcopy -i haribote.img walk.hrb ::
 	mcopy -i haribote.img noodle.hrb ::
+	mcopy -i haribote.img color.hrb ::
+	mcopy -i haribote.img color2.hrb ::
 	# echo haribote.sys > haribote.name
 	# dd if=ipl10.bin     of=haribote.img count=2880 bs=512 conv=notrunc
 	# dd if=haribote.name of=haribote.img count=1 bs=512 seek=19 conv=notrunc

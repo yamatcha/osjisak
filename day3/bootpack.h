@@ -205,7 +205,8 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
 struct TIMER
 {
     struct TIMER *next;
-    unsigned int timeout, flags;
+    unsigned int timeout;
+    char flags, flags2;
     struct FIFO32 *fifo;
     int data;
 };

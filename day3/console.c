@@ -370,6 +370,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
                     sheet_free(sht);
                 }
             }
+            timer_cancelall(&task->fifo);
             memman_free_4k(memman, (int)q, segsiz);
         }
         else
@@ -514,12 +515,29 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
             {
                 cons->cur_c = -1;
             }
-            if (256 <= i && i <= 511)
+            if (256 <= i)
             {
                 reg[7] = i - 256;
                 return 0;
             }
         }
+    }
+    else if (edx == 16)
+    {
+        reg[7] = (int)timer_alloc();
+        ((struct TIMER *)reg[7])->flags2 = 1;
+    }
+    else if (edx == 17)
+    {
+        timer_init((struct TIMER *)ebx, &task->fifo, eax + 256);
+    }
+    else if (edx == 18)
+    {
+        timer_settime((struct TIMER *)ebx, eax);
+    }
+    else if (edx == 19)
+    {
+        timer_free((struct TIMER *)ebx);
     }
     return 0;
 }
@@ -610,5 +628,24 @@ void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col)
         y += dy;
     }
 
+    return;
+}
+
+void timer_cancelall(struct FIO32 *fifo)
+{
+    int e, i;
+    struct TIMER *t;
+    e = io_load_eflags();
+    io_cli();
+    for (i = 0; i < MAX_TIMER; i++)
+    {
+        t = &timerctl.timers0[i];
+        if (t->flags != 0 && t->flags2 != 0 && t->fifo == fifo)
+        {
+            timer_cancel(t);
+            timer_free(t);
+        }
+    }
+    io_store_eflags(e);
     return;
 }

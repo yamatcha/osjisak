@@ -6,7 +6,7 @@ void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     int mx, my, i, task_b_esp;
-    int j, x, y, mmx = -1, mmy = -1;
+    int j, x, y, mmx = -1, mmy = -1, mmx2 = 0;
     struct SHEET *sht = 0, *key_win;
     // char *p;
     char *vram;
@@ -313,6 +313,7 @@ void HariMain(void)
                                         {
                                             mmx = mx;
                                             mmy = my;
+                                            mmx2 = sht->vx0;
                                         }
                                         if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
                                         {
@@ -335,8 +336,7 @@ void HariMain(void)
                         {
                             x = mx - mmx;
                             y = my - mmy;
-                            sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
-                            mmx = mx;
+                            sheet_slide(sht, (mmx2 + x + 2) & ~3, sht->vy0 + y);
                             mmy = my;
                         }
                     }

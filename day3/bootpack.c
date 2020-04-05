@@ -41,7 +41,7 @@ void HariMain(void)
 
     unsigned char *buf_back, buf_mouse[256], *buf_win, *buf_cons[2];
     struct SHEET *sht_back, *sht_mouse, *sht_win, *sht_cons[2];
-    struct TASK *task_a, *task_cons[2];
+    struct TASK *task_a, *task_cons[2], *task;
     struct TIMER *timer;
     struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
 
@@ -272,14 +272,17 @@ void HariMain(void)
                     fifo32_put(&keycmd, KEYCMD_LED);
                     fifo32_put(&keycmd, key_leds);
                 }
-                if (i == 256 + 0x3b && key_shift != 0 && task_cons[0]->tss.ss0 != 0)
+                if (i == 256 + 0x3b && key_shift != 0)
                 {
-                    cons = (struct CONSOLE *)*((int *)0x0fec);
-                    cons_putstr0(cons, "\nBreak(key):\n");
-                    io_cli();
-                    task_cons[0]->tss.eax = (int)&(task_cons[0]->tss.esp0);
-                    task_cons[0]->tss.eip = (int)asm_end_app;
-                    io_sti();
+                    task = key_win->task;
+                    if (task != 0 && task->tss.ss0)
+                    {
+                        cons_putstr0(task->cons, "\nBreak(key):\n");
+                        io_cli();
+                        task->tss.eax = (int)&(task->tss.esp0);
+                        task->tss.eip = (int)asm_end_app;
+                        io_sti();
+                    }
                 }
                 if (i == 256 + 0x57)
                 {
@@ -366,17 +369,14 @@ void HariMain(void)
                                         }
                                         if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
                                         {
-                                            if (sht->task != 0)
+                                            if ((sht->flags & 0x10) != 0)
                                             {
-                                                if ((sht->flags & 0x10) != 0)
-                                                {
-                                                    cons = (struct CONSOLE *)*((int *)0x0fec);
-                                                    cons_putstr0(cons, "\nBreak(mouse) : \n");
-                                                    io_cli();
-                                                    task_cons[0]->tss.eax = (int)&(task_cons[0]->tss.esp0);
-                                                    task_cons[0]->tss.eip = (int)asm_end_app;
-                                                    io_sti();
-                                                }
+                                                task = sht->task;
+                                                cons_putstr0(task->cons, "\nBreak(mouse) : \n");
+                                                io_cli();
+                                                task->tss.eax = (int)&(task->tss.esp0);
+                                                task->tss.eip = (int)asm_end_app;
+                                                io_sti();
                                             }
                                         }
                                         break;

@@ -6,6 +6,8 @@ void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     int mx, my, i, cursor_x, cursor_c, task_b_esp;
+    int j, x, y;
+    struct SHEET *sht;
     // char *p;
     char *vram;
     struct FIFO32 fifo, keycmd;
@@ -279,6 +281,10 @@ void HariMain(void)
                     task_cons->tss.eip = (int)asm_end_app;
                     io_sti();
                 }
+                if (i == 256 + 0x57)
+                {
+                    sheet_updown(shtctl->sheets[1], shtctl->top - 1);
+                }
                 if (i == 256 + 0xfa)
                 { /* キーボードがデータを無事に受け取った */
                     keycmd_wait = -1;
@@ -335,7 +341,20 @@ void HariMain(void)
                     sheet_slide(sht_mouse, mx, my);
                     if ((mdec.btn & 0x01) != 0)
                     {
-                        sheet_slide(sht_win, mx - 80, my - 8);
+                        for (j = shtctl->top - 1; j > 0; j--)
+                        {
+                            sht = shtctl->sheets[j];
+                            x = mx - sht->vx0;
+                            y = my - sht->vy0;
+                            if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
+                            {
+                                if (sht->buf[y * sht->bxsize + x] != sht->col_inv)
+                                {
+                                    sheet_updown(sht, shtctl->top - 1);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }

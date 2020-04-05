@@ -246,7 +246,7 @@ struct TASK
     int priority, level;
     struct FIFO32 fifo;
     struct CONSOLE *cons;
-    int ds_base;
+    int ds_base, cons_stack;
 };
 struct TASKLEVEL
 {

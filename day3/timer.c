@@ -173,3 +173,22 @@ int timer_cancel(struct TIMER *timer)
     io_store_eflags(e);
     return 0;
 }
+
+void timer_cancelall(struct FIFO32 *fifo)
+{
+    int e, i;
+    struct TIMER *t;
+    e = io_load_eflags();
+    io_cli();
+    for (i = 0; i < MAX_TIMER; i++)
+    {
+        t = &timerctl.timers0[i];
+        if (t->flags != 0 && t->flags2 != 0 && t->fifo == fifo)
+        {
+            timer_cancel(t);
+            timer_free(t);
+        }
+    }
+    io_store_eflags(e);
+    return;
+}

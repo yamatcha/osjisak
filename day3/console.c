@@ -1,6 +1,6 @@
 #include "bootpack.h"
 
-void console_task(struct SHEET *sheet, unsigned int memtotal)
+void console_task(struct SHEET *sheet, int memtotal)
 {
     struct TIMER *timer;
     struct TASK *task = task_now();
@@ -12,12 +12,12 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
     cons.cur_x = 8;
     cons.cur_y = 28;
     cons.cur_c = -1;
-    *((int *)0x0fec) = (int)&cons;
+    task->cons = &cons;
 
     fifo32_init(&task->fifo, 128, fifobuf, task);
-    timer = timer_alloc();
-    timer_init(timer, &task->fifo, 1);
-    timer_settime(timer, 50);
+    cons.timer = timer_alloc();
+    timer_init(cons.timer, &task->fifo, 1);
+    timer_settime(cons.timer, 50);
     file_readfat(fat, (unsigned char *)(ADR_DISKIMG + 0x000200));
 
     /* プロンプト表示 */
@@ -53,7 +53,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
                         cons.cur_c = COL8_000000;
                     }
                 }
-                timer_settime(timer, 50);
+                timer_settime(cons.timer, 50);
             }
             if (i == 2)
             { /* カーソルON */
@@ -203,7 +203,7 @@ void cons_putstr1(struct CONSOLE *cons, char *s, int l)
     return;
 }
 
-void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal)
+void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal)
 {
 
     if (strcmp(cmdline, "mem") == 0)
@@ -232,7 +232,7 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
     return;
 }
 
-void cmd_mem(struct CONSOLE *cons, unsigned int memtotal)
+void cmd_mem(struct CONSOLE *cons, int memtotal)
 {
     struct MEMMAN *memman = (struct MEMMAN *)MEMMAN_ADDR;
     char s[60];
@@ -346,21 +346,21 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
     {
         p = (char *)memman_alloc_4k(memman, finfo->size);
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
-        if (finfo->size >= 8 && strcmp(p + 4, "Hari", 4) == 0 && *p == 0x00)
+        if (finfo->size >= 36 && strcmp(p + 4, "Hari", 4) == 0 && *p == 0x00)
         {
             segsiz = *((int *)(p + 0x0000));
             esp = *((int *)(p + 0x000c));
             datsiz = *((int *)(p + 0x0010));
             dathrb = *((int *)(p + 0x0014));
             q = (char *)memman_alloc_4k(memman, segsiz);
-            *((int *)0xfe8) = (int)q;
-            set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
-            set_segmdesc(gdt + 1004, segsiz - 1, (int)q, AR_DATA32_RW + 0x60);
+            task->ds_base = (int)q;
+            set_segmdesc(gdt + task->sel / 8 + 1000, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
+            set_segmdesc(gdt + task->sel / 8 + 2000, segsiz - 1, (int)q, AR_DATA32_RW + 0x60);
             for (i = 0; i < datsiz; i++)
             {
                 q[esp + i] = p[dathrb + i];
             }
-            start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+            start_app(0x1b, task->sel + 1000 * 8, esp, task->sel + 2000 * 8, &(task->tss.esp0));
             shtctl = (struct SHTCTL *)*((int *)0x0fe4);
             for (i = 0; i < MAX_SHEETS; i++)
             {
@@ -386,9 +386,9 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
-    int ds_base = *((int *)0xfe8);
     struct TASK *task = task_now();
-    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+    int ds_base = task->ds_base;
+    struct CONSOLE *cons = task->cons;
     struct SHTCTL *shtctl = (struct CONSOLE *)*((int *)0x0fe4);
     struct SHEET *sht;
     int *reg = &eax + 1;
@@ -417,8 +417,8 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
         sht->flags |= 0x10;
         sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
         make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
-        sheet_slide(sht, 100, 50);
-        sheet_updown(sht, 3);
+        sheet_slide(sht, (shtctl->xsize - esi) / 2, (shtctl->ysize - edi) / 2);
+        sheet_updown(sht, shtctl->top);
         reg[7] = (int)sht;
     }
     else if (edx == 6)
@@ -561,8 +561,8 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 
 int inthandler0d(int *esp)
 {
-    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task = task_now();
+    struct CONSOLE *cons = task->cons;
     char s[30];
     cons_putstr0(cons, "\nINT 0d : \n General Protected Exception.\n");
     sprintf(s, "EIP = %x\n", esp[11]);
@@ -572,8 +572,8 @@ int inthandler0d(int *esp)
 
 int inthandler0c(int *esp)
 {
-    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task = task_now();
+    struct CONSOLE *cons = task->cons;
     char s[30];
     cons_putstr0(cons, "\nINT 0C:\n Stack Exception.\n");
     sprintf(s, "EIP = %X\n", esp[11]);
@@ -645,24 +645,5 @@ void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col)
         y += dy;
     }
 
-    return;
-}
-
-void timer_cancelall(struct FIO32 *fifo)
-{
-    int e, i;
-    struct TIMER *t;
-    e = io_load_eflags();
-    io_cli();
-    for (i = 0; i < MAX_TIMER; i++)
-    {
-        t = &timerctl.timers0[i];
-        if (t->flags != 0 && t->flags2 != 0 && t->fifo == fifo)
-        {
-            timer_cancel(t);
-            timer_free(t);
-        }
-    }
-    io_store_eflags(e);
     return;
 }
